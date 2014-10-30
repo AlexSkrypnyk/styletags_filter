@@ -1,0 +1,39 @@
+<?php
+/**
+ * @file
+ * Install file for styletags_filter module.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function styletags_filter_requirements($phase) {
+  // Ensure translations do not break at install time.
+  $t = get_t();
+
+  $required_libraries = array(
+    'QueryPath',
+    'PHP-CSS-Parser',
+  );
+
+  $found_libraries = libraries_get_libraries();
+  $requirements = array();
+  foreach ($required_libraries as $required_library) {
+    $library = libraries_load($required_library);
+    $requirements[$required_library]['title'] = $library['name'];
+    if (isset($found_libraries[$required_library])) {
+      $requirements[$required_library]['value'] = $t('Installed');
+      $requirements[$required_library]['severity'] = REQUIREMENT_OK;
+    }
+    else {
+      $requirements[$required_library]['value'] = $t('Not Installed');
+      $requirements[$required_library]['severity'] = REQUIREMENT_ERROR;
+      $requirements[$required_library]['description'] = $t('Please install library from %url.', array(
+          '%url' => $library['download url'],
+        )
+      );
+    }
+  }
+
+  return $requirements;
+}

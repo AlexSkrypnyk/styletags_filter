@@ -1,0 +1,381 @@
+<?php
+/**
+ * @file
+ * Style to tag filter converts text with embedded styles into tags.
+ */
+
+/**
+ * Implements hook_filter_info().
+ */
+function styletags_filter_filter_info() {
+  $filters['styletags_filter'] = array(
+    'title' => t('Convert embedded styles into tags'),
+    'description' => t('Convert embedded styles into tags using CSS rule-to-tag mapping.'),
+    'process callback' => '_styletags_filter_process',
+    'tips callback' => '_styletags_filter_tips',
+    'settings callback' => '_styletags_filter_settings',
+    'default settings' => array(
+      'tags_map' => _styletags_filter_mapping_flatten(_styletags_filter_mapping_default()),
+      'remove_obsolete' => TRUE,
+    ),
+  );
+
+  return $filters;
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function styletags_filter_libraries_info() {
+  $libraries['QueryPath'] = array(
+    'name' => 'QueryPath',
+    'vendor url' => 'https://github.com/technosophos/querypath',
+    'download url' => 'https://github.com/technosophos/querypath/archive/master.zip',
+    'version arguments' => array(
+      'file' => 'RELEASE',
+      'pattern' => '/([0-9\.]+)\:.*/',
+      'lines' => 3,
+      'cols' => 20,
+    ),
+  );
+
+  $libraries['PHP-CSS-Parser'] = array(
+    'name' => 'PHP CSS Parser',
+    'vendor url' => 'https://github.com/sabberworm/PHP-CSS-Parser',
+    'download url' => 'https://github.com/sabberworm/PHP-CSS-Parser/archive/master.zip',
+    'path' => 'lib',
+    'version arguments' => array(
+      'file' => 'CHANGELOG.md',
+      'pattern' => '/##\s+([0-9\.]+).*/',
+      'lines' => 3,
+      'cols' => 20,
+    ),
+    'spl_autoload' => TRUE,
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements callback_filter_tips().
+ */
+function _styletags_filter_tips($filter, $format, $long = FALSE) {
+  if ($long) {
+    return t('When embedded styles provided, tags with classes are replaced with relevant tags, which correspond to class rules.');
+  }
+  else {
+    return t('Tags with classes from embedded styles are replaced with appropriate.');
+  }
+}
+
+/**
+ * Implements callback_filter_settings().
+ */
+function _styletags_filter_settings($form, &$form_state, $filter, $format, $defaults) {
+  $filter->settings += $defaults;
+
+  $settings['tags_map'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Tags to styles mapping'),
+    '#default_value' => $filter->settings['tags_map'],
+    '#description' => t('A list of tag to styles mappings. One mapping per line. Tag devided by pipe (|) from style rules. For multiple matches, topmost tags become innermost when replaced in DOM.<br/><em>Example, strong|font-weight:strong<br/>This will convert any tags that have classes with selected CSS rules into tags.</em>'),
+  );
+
+  $settings['remove_obsolete'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Remove obsolete tags'),
+    '#default_value' => $filter->settings['remove_obsolete'],
+    '#description' => t('Remove tags that participated in the filtering process (because classes assigned to them were listed in embedded styles) and had all their classes removed making them obsolete. This does not apply to block-level elements.'),
+  );
+
+  return $settings;
+}
+
+/**
+ * Helper to load library file.
+ *
+ * If 'spl_autoload' is set to TRUE in hook_libraries_info() this function will
+ * try to register spl_autoloader callback, if it exists, in format
+ * '_MODULENAME_libname_with_underscores_autoloader'.
+ *
+ * @param string $library
+ *   Library name.
+ * @param string $file
+ *   Optional library file name with extension.
+ */
+function _styletags_filter_load_library($library, $file = NULL) {
+  $lib = libraries_load($library);
+
+  // Perform spl autoload callback registration, if required.
+  if (!empty($lib['spl_autoload'])) {
+    // Escape library name to use it in callback name.
+    $library_safe = strtolower(str_replace(array(' ', '-'), '_', $library));
+    $spl_autoloader_callback = '_styletags_filter' . '_' . $library_safe . '_autoloader';
+    if (function_exists($spl_autoloader_callback)) {
+      spl_autoload_register($spl_autoloader_callback);
+    }
+  }
+
+  // Include file, if it was provided.
+  if ($file) {
+    $path = libraries_get_path($library);
+    $filename = DRUPAL_ROOT . '/' . $path . '/' . $file;
+    if (file_exists($filename)) {
+      require_once $filename;
+    }
+    else {
+      throw new Exception(format_string('Could not load @library library', array('@library' => $library)));
+    }
+  }
+}
+
+/**
+ * Autoloader callback for PHP-CSS-Parser library.
+ */
+function _styletags_filter_php_css_parser_autoloader($class) {
+  $library_path = libraries_get_path('PHP-CSS-Parser');
+
+  $filename = DRUPAL_ROOT . '/' . $library_path . '/lib/' . $class . '.php';
+  $filename = str_replace('\\', '/', $filename);
+
+  if (file_exists($filename)) {
+    require_once $filename;
+  }
+}
+
+/**
+ * Process callback for filter.
+ */
+function _styletags_filter_process($text, $filter, $format, $langcode, $cache, $cache_id) {
+  // Prepare configuration from settings.
+  $tags_map = _styletags_filter_mapping_parse($filter->settings['tags_map']);
+  $remove_obsolete_tags = $filter->settings['remove_obsolete'];
+
+  $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
+
+  _styletags_filter_load_library('QueryPath', 'QueryPath.php');
+
+  // Extract styles from text.
+  $qp = htmlqp($text);
+  $styles = $qp->branch()->find('style')->html();
+
+  // If no styles were provided, skip processing.
+  if (empty($styles)) {
+    return $text;
+  }
+
+  // Remove style tag since we are working with content only.
+  $qp->remove('style');
+
+  // Parse plain text styles into array of rule sets.
+  $rule_sets = _styletags_filter_parse_styles($styles);
+
+  // If no valid rule set was provided, skip processing.
+  if (empty($rule_sets)) {
+    return $text;
+  }
+
+  // Find all tags with set 'class' attribute.
+  foreach ($qp->branch()->find('*[class]') as $qp_item) {
+    // Get array odf classes.
+    $classes = $qp_item->attr('class');
+    $classes = explode(' ', $classes);
+
+    // Traverse through classes and check if previously parsed rule sets match.
+    foreach ($classes as $class) {
+      if (isset($rule_sets[$class])) {
+        // Find all tags that match current classes CSS rules.
+        $found_tags = array();
+        foreach ($rule_sets[$class] as $property => $val) {
+          $found_tags = array_merge($found_tags, _styletags_filter_find_tag($tags_map, $property, $val));
+        }
+
+        // Order tags by weight, so that topmost tags will become innermost
+        // tags in DOM.
+        $found_tags = _styletags_filter_sort_array_by_array($found_tags, array_keys($tags_map));
+
+        // Remove current class.
+        $qp_item->removeClass($class);
+
+        // Wrap current item with found tags.
+        // @todo: Add support for attributes in tags so that it would be
+        // possible to replace classes with inline styles.
+        foreach ($found_tags as $found_tag) {
+          $found_tag_full = '<' . $found_tag . '></' . $found_tag . '>';
+          $qp_item->wrapInner($found_tag_full);
+        }
+
+        // Get leftover classes for this iteration.
+        $classes_left = $qp_item->branch()->attr('class');
+
+        // Current tag's tag name.
+        $tag = $qp_item->tag();
+
+        // Remove current tag if it:
+        // - Had classes from given styles (would not reach here if didn't
+        //   have those classes).
+        // - Had all classes removed.
+        // - Not a block-level tag.
+        // - Global setting allows removal.
+        if ($remove_obsolete_tags && !empty($found_tags) && empty($classes_left) && !in_array($tag, $block_level_tags)) {
+          $qp_item->children()->branch()->unwrap();
+        }
+      }
+    }
+  }
+
+  // Since QueryPath always wraps any provided HTML with full doctype, retrieve
+  // result as inner HTML.
+  $text = $qp->find('body')->innerHTML();
+
+  return $text;
+}
+
+/**
+ * Parse text-base styles into array of rule sets.
+ *
+ * @param string $styles
+ *   String styles as text.
+ *
+ * @return array
+ *   Array of rule sets with class names as keys and array of rule => value
+ *   values.
+ */
+function _styletags_filter_parse_styles($styles) {
+  $rules = array();
+
+  // Load PHP CSS Parser library.
+  _styletags_filter_load_library('PHP-CSS-Parser');
+
+  // Init parser and parse styles.
+  $css_parser = new Sabberworm\CSS\Parser($styles);
+  $css_document = $css_parser->parse();
+
+  // Create array of rule sets with property and values as child arrays.
+  foreach ($css_document->getAllRuleSets() as $rule_set) {
+    foreach ($rule_set->getSelectors() as $selector) {
+      $rule_set_name = (string) $selector;
+      // Skip non-classes rule sets.
+      if (strpos($rule_set_name, '.') !== 0) {
+        continue;
+      }
+      $rule_set_name_no_dot = ltrim($rule_set_name, '.');
+      $rules[$rule_set_name_no_dot] = array();
+      foreach ($rule_set->getRules() as $rule) {
+        $rule_name = (string) $rule->getRule();
+        $rule_value = (string) $rule->getValue();
+        $rules[$rule_set_name_no_dot][$rule_name] = $rule_value;
+      }
+    }
+  }
+
+  return $rules;
+}
+
+/**
+ * Find all map tags that have both specified CSS rule and value.
+ *
+ * @param array $map
+ *   Array of tag to CSS rule mapings.
+ * @param string $property
+ *   String CSS property to search for.
+ * @param string $value
+ *   String CSS property value to search for.
+ *
+ * @return array
+ *   Array of matched tags or empty array if no tags matched.
+ */
+function _styletags_filter_find_tag($map, $property, $value) {
+  $found_tags = array();
+  foreach ($map as $tag => $map_rules) {
+    foreach ($map_rules as $map_property => $map_value) {
+      if ($map_property == $property && $map_value == $value) {
+        $found_tags[] = $tag;
+      }
+    }
+  }
+
+  return array_unique($found_tags);
+}
+
+/**
+ * Helper to parse text settings into expected array structure.
+ */
+function _styletags_filter_mapping_parse($text) {
+  $map = array();
+  $lines = preg_split('/\R/', $text);
+  foreach ($lines as $line) {
+    list($tag, $rule) = explode('|', $line);
+    list($prop, $val) = explode(':', $rule);
+    $tag = trim($tag);
+    $prop = trim($prop);
+    $val = trim($val);
+
+    if (!empty($tag) && !empty($prop) && !empty($val)) {
+      $map[$tag][$prop] = $val;
+    }
+  }
+
+  return $map;
+}
+
+/**
+ * Helper to flatten mapping array to become suitable for form value.
+ */
+function _styletags_filter_mapping_flatten($map) {
+  $output = '';
+  foreach ($map as $tag => $rules) {
+    foreach ($rules as $property => $value) {
+      $output .= $tag;
+      $output .= '|';
+      $output .= $property;
+      $output .= ':';
+      $output .= $value;
+      $output .= "\n";
+    }
+  }
+
+  return $output;
+}
+
+/**
+ * Default filter mapping.
+ */
+function _styletags_filter_mapping_default() {
+  return array(
+    'strong' => array(
+      'font-weight' => 'bold',
+    ),
+    'em' => array(
+      'font-style' => 'italic',
+    ),
+  );
+}
+
+/**
+ * Helper to sort array values by values in another array.
+ *
+ * @param array $sortable
+ *   Array of values to be sorted.
+ * @param array $order
+ *   Array of values to be a source of values order.
+ *
+ * @return array
+ *   Combined array of ordered and not found unordered items. Ordered items
+ *   always go first.
+ */
+function _styletags_filter_sort_array_by_array($sortable, $order) {
+  $ordered = array();
+
+  $sortable = array_unique($sortable);
+
+  foreach ($order as $o) {
+    $found = array_search($o, $sortable);
+    if ($found !== FALSE) {
+      $ordered[] = $sortable[$found];
+      unset($sortable[$found]);
+    }
+  }
+
+  return array_merge($ordered, $sortable);
+}

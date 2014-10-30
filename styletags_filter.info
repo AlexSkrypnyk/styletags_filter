@@ -1,0 +1,5 @@
+name = Style to tags filter
+description = Style to tag filter converts text with embedded styles into tags.
+core = 7.x
+package = Other
+dependencies[] = libraries
