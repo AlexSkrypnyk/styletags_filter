@@ -33,11 +33,17 @@ function styletags_filter_libraries_info() {
     'name' => 'QueryPath',
     'vendor url' => 'https://github.com/technosophos/querypath',
     'download url' => 'https://github.com/technosophos/querypath/archive/master.zip',
+    'path' => 'src',
     'version arguments' => array(
       'file' => 'RELEASE',
       'pattern' => '/([0-9]+\.[0-9]+\.[0-9]+)/',
       'lines' => 10,
       'cols' => 20,
+    ),
+    'files' => array(
+      'php' => array(
+        'qp.php',
+      ),
     ),
   );
 
@@ -100,35 +106,29 @@ function _styletags_filter_settings($form, &$form_state, $filter, $format, $defa
  * try to register spl_autoloader callback, if it exists, in format
  * '_MODULENAME_libname_with_underscores_autoloader'.
  *
- * @param string $library
+ * @param string $library_name
  *   Library name.
- * @param string $file
- *   Optional library file name with extension.
  */
-function _styletags_filter_load_library($library, $file = NULL) {
-  $lib = libraries_load($library);
+function _styletags_filter_load_library($library_name) {
+  $library = libraries_load($library_name);
 
-  // Perform spl autoload callback registration, if required.
-  if (!empty($lib['spl_autoload'])) {
-    // Escape library name to use it in callback name.
-    $library_safe = strtolower(str_replace(array(' ', '-'), '_', $library));
-    $spl_autoloader_callback = '_styletags_filter' . '_' . $library_safe . '_autoloader';
-    if (function_exists($spl_autoloader_callback)) {
-      spl_autoload_register($spl_autoloader_callback);
+  if ($library) {
+    // Perform spl autoload callback registration, if required.
+    if (!empty($library['spl_autoload'])) {
+      // Escape library name to use it in callback name.
+      $library_safe = strtolower(str_replace(array(' ', '-'), '_', $library_name));
+      $spl_autoloader_callback = '_styletags_filter' . '_' . $library_safe . '_autoloader';
+      if (function_exists($spl_autoloader_callback)) {
+        spl_autoload_register($spl_autoloader_callback);
+      }
     }
+
+    // Include library files.
+    libraries_load_files($library);
+    return;
   }
 
-  // Include file, if it was provided.
-  if ($file) {
-    $path = libraries_get_path($library);
-    $filename = DRUPAL_ROOT . '/' . $path . '/' . $file;
-    if (file_exists($filename)) {
-      require_once $filename;
-    }
-    else {
-      throw new Exception(format_string('Could not load @library library', array('@library' => $library)));
-    }
-  }
+  throw new Exception(format_string('Could not load @library library', array('@library' => $library_name)));
 }
 
 /**
@@ -155,7 +155,7 @@ function _styletags_filter_process($text, $filter, $format, $langcode, $cache, $
 
   $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
 
-  _styletags_filter_load_library('querypath', 'QueryPath.php');
+  _styletags_filter_load_library('querypath');
 
   // Extract styles from text.
   $qp = htmlqp($text);
