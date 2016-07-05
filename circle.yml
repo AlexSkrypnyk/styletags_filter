@@ -8,7 +8,7 @@ machine:
     # Module name to test. Change to your module name.
     MODULE_NAME: "styletags_filter"
     # Module's tests to run: test group or class name. Change for your module.
-    MODULE_TESTS: "Style to tags filter"
+    MODULE_TESTS: "Styletags Filter"
     #
     # Other variables for build configuration. Not needed to be changed.
     #
