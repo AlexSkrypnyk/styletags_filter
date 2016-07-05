@@ -159,7 +159,7 @@ function _styletags_filter_process($text, $filter, $format, $langcode, $cache, $
 
   // Extract styles from text.
   $qp = htmlqp($text);
-  $styles = $qp->branch()->find('style')->html();
+  $styles = $qp->branch()->find('style')->innerHtml();
 
   // If no styles were provided, skip processing.
   if (empty($styles)) {
@@ -248,6 +248,9 @@ function _styletags_filter_parse_styles($styles) {
 
   // Load PHP CSS Parser library.
   _styletags_filter_load_library('PHP-CSS-Parser');
+
+  $cdata = '/(<!\[CDATA\[|\]\]>)/i';
+  $styles = preg_replace($cdata, '', $styles);
 
   // Init parser and parse styles.
   $css_parser = new Parser($styles);
