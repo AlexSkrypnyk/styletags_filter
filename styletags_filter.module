@@ -304,17 +304,21 @@ function _styletags_filter_find_tag($map, $property, $value) {
  * Helper to parse text settings into expected array structure.
  */
 function _styletags_filter_mapping_parse($text) {
-  $map = array();
-  $lines = preg_split('/\R/', $text);
-  foreach ($lines as $line) {
-    list($tag, $rule) = explode('|', $line);
-    list($prop, $val) = explode(':', $rule);
-    $tag = trim($tag);
-    $prop = trim($prop);
-    $val = trim($val);
+  $map = drupal_static(__FUNCTION__);
 
-    if (!empty($tag) && !empty($prop) && !empty($val)) {
-      $map[$tag][$prop] = $val;
+  if (!$map) {
+    $map = array();
+    $lines = preg_split('/\R/', trim($text));
+    foreach ($lines as $line) {
+      list($tag, $css_rule) = explode('|', $line);
+      list($css_prop, $css_value) = explode(':', $css_rule);
+      $tag = trim($tag);
+      $css_prop = trim($css_prop);
+      $css_value = trim($css_value);
+
+      if (!empty($tag) && !empty($css_prop) && !empty($css_value)) {
+        $map[$tag][$css_prop] = $css_value;
+      }
     }
   }
 
