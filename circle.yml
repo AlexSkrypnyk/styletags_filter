@@ -7,6 +7,8 @@ machine:
   environment:
     # Module name to test. Change to your module name.
     MODULE_NAME: "styletags_filter"
+    # Module's tests to run: test group or class name. Change for your module.
+    MODULE_TESTS: "Style to tags filter"
     #
     # Other variables for build configuration. Not needed to be changed.
     #
@@ -109,3 +111,5 @@ test:
   override:
   # Run code linter.
   - cd $DOCROOT && source ~/.profile && dcr $MODULES_PATH/$MODULE_NAME
+  # Run Drupal tests.
+  - php $DOCROOT/scripts/run-tests.sh --php $PHP_EXECUTABLE --url $WEB_URL --xml $TEST_RESULTS "$MODULE_TESTS"
