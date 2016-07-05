@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Style to tag filter converts text with embedded styles into tags.
+ * Filter to convert embedded CSS styles into tags.
  */
 
 use \Sabberworm\CSS\Parser;
@@ -82,11 +82,33 @@ function _styletags_filter_tips($filter, $format, $long = FALSE) {
 function _styletags_filter_settings($form, &$form_state, $filter, $format, $defaults) {
   $filter->settings += $defaults;
 
+  $code_example_before = '
+<style>
+  .myclass {
+    font-weight: bold;
+  }
+</style>
+  
+<span class="myclass">
+  some bold text
+</span>
+';
+
+  $code_example_after = '
+<strong>
+  some bold text
+</strong>';
+
   $settings['tags_map'] = array(
     '#type' => 'textarea',
     '#title' => t('Tags to styles mapping'),
     '#default_value' => $filter->settings['tags_map'],
-    '#description' => t('A list of tag to styles mappings. One mapping per line. Tag devided by pipe (|) from style rules. For multiple matches, topmost tags become innermost when replaced in DOM.<br/><em>Example, strong|font-weight:strong<br/>This will convert any tags that have classes with selected CSS rules into tags.</em>'),
+    '#description' => t('A list of tag-to-styles mappings. One mapping per line. Tag divided by pipe (|) from style rules.<br/><br/>
+    For example, the mapping <code>strong|font-weight:strong</code> will convert any tags that have class with <code>font-weight:bold</code> CSS rule in it into <code>&lt;strong&gt;</code> tag:<br/>
+    !code
+    <br>If multiple CSS rules match, tags that are specified on the top of the mapping list will become innermost when replaced in DOM.', array(
+      '!code' => '<pre><code>' . htmlentities($code_example_before) . '</code></pre><br/>converted to<br/><pre><code>' . htmlentities($code_example_after) . '</code></pre>',
+    )),
   );
 
   $settings['remove_obsolete'] = array(
