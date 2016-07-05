@@ -3,9 +3,6 @@ Drupal module to convert embedded CSS styles into tags.
 
 [![CircleCI](https://circleci.com/gh/alexdesignworks/styletags_filter.svg?style=shield)](https://circleci.com/gh/alexdesignworks/styletags_filter)
 
-
-A list of tag-to-styles mappings. One mapping per line. Tag divided by pipe (|) from style rules.
-
 Converts this
 ```
 <style>
@@ -24,3 +21,7 @@ to this
   some bold text
 </strong>
 ```
+## Use-case
+1. Content is already imported from 3-rd party resource, but embedded styles override theme styles.
+ 
+2. Content being imported from 3-rd party and this filter can be used to cleanup embedded styles.
