@@ -17,6 +17,7 @@ machine:
     # Build directories configuration.
     DOCROOT: "$HOME/$CIRCLE_PROJECT_REPONAME/docroot"
     MODULES_PATH: "$DOCROOT/sites/all/modules/custom"
+    LIBRARIES_PATH: "$DOCROOT/sites/all/libraries"
     TEST_RESULTS: "$CIRCLE_TEST_REPORTS"
     # DB config. Using default CircleCI's database.
     DB_NAME: "circle_test"
@@ -34,6 +35,7 @@ machine:
 
 dependencies:
   pre:
+  - sudo apt-get update; sudo apt-get install unzip
   # Modify user to make sure that there will be no permission issues.
   - sudo usermod -a -G $WEB_GROUP $WEB_USER
   # Add apache config.
@@ -94,6 +96,9 @@ dependencies:
   - git archive $(git rev-parse --abbrev-ref HEAD) | tar -x -C $MODULES_PATH/$MODULE_NAME
   # Download an enable all module dependencies.
   - cd $MODULES_PATH/$MODULE_NAME && grep -aPoi "dependencies\[\]\s*=\s\K([^\s]+)" *.info|tr "\n" "," | xargs drush --yes --root=$DOCROOT en
+  # Download required libraries.
+  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/technosophos/querypath/archive/master.zip && unzip -d querypath tmp.zip && rm tmp.zip
+  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/sabberworm/PHP-CSS-Parser/archive/master.zip && unzip -d PHP-CSS-Parser tmp.zip && rm tmp.zip
   # Enable current module.
   - drush --yes --root=$DOCROOT en $MODULE_NAME
 
