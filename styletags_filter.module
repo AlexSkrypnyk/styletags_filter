@@ -4,6 +4,8 @@
  * Style to tag filter converts text with embedded styles into tags.
  */
 
+use \Sabberworm\CSS\Parser;
+
 /**
  * Implements hook_filter_info().
  */
@@ -248,7 +250,7 @@ function _styletags_filter_parse_styles($styles) {
   _styletags_filter_load_library('PHP-CSS-Parser');
 
   // Init parser and parse styles.
-  $css_parser = new Sabberworm\CSS\Parser($styles);
+  $css_parser = new Parser($styles);
   $css_document = $css_parser->parse();
 
   // Create array of rule sets with property and values as child arrays.
