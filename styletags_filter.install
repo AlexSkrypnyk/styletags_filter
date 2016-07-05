@@ -8,26 +8,37 @@
  * Implements hook_requirements().
  */
 function styletags_filter_requirements($phase) {
+  $requirements = array();
+
   $t = get_t();
 
-  $required_libraries = array(
-    'QueryPath',
-    'PHP-CSS-Parser',
-  );
+  if ($phase == 'install') {
+    module_load_include('module', 'libraries');
+    if (!function_exists('libraries_get_libraries')) {
+      $requirements['styletags_filter']['severity'] = REQUIREMENT_ERROR;
+      $requirements['styletags_filter']['description'] = $t('Please download and enable libraries module before enabling this module.');
+
+      return $requirements;
+    }
+  }
+
+  module_load_include('module', 'styletags_filter');
+  $required_libraries = styletags_filter_libraries_info();
 
   $found_libraries = libraries_get_libraries();
-  $requirements = array();
-  foreach ($required_libraries as $required_library) {
-    $library = libraries_load($required_library);
-    $requirements[$required_library]['title'] = $library['name'];
+  foreach ($required_libraries as $required_library => $required_library_info) {
+    $requirements[$required_library]['title'] = $required_library_info['name'];
     if (isset($found_libraries[$required_library])) {
-      $requirements[$required_library]['value'] = $t('Installed');
+      $library = libraries_detect($required_library);
+      $requirements[$required_library]['value'] = $library['version'];
       $requirements[$required_library]['severity'] = REQUIREMENT_OK;
     }
     else {
-      $requirements[$required_library]['value'] = $t('Not Installed');
       $requirements[$required_library]['severity'] = REQUIREMENT_ERROR;
-      $requirements[$required_library]['description'] = $t('Please install library from %url.', array('%url' => $library['download url']));
+      $requirements[$required_library]['description'] = $t('Please install library @name from %url.', array(
+        '@name' => $required_library_info['name'],
+        '%url' => $required_library_info['download url'],
+      ));
     }
   }
 

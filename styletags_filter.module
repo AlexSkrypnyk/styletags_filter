@@ -29,14 +29,14 @@ function styletags_filter_filter_info() {
  * Implements hook_libraries_info().
  */
 function styletags_filter_libraries_info() {
-  $libraries['QueryPath'] = array(
+  $libraries['querypath'] = array(
     'name' => 'QueryPath',
     'vendor url' => 'https://github.com/technosophos/querypath',
     'download url' => 'https://github.com/technosophos/querypath/archive/master.zip',
     'version arguments' => array(
       'file' => 'RELEASE',
-      'pattern' => '/([0-9\.]+)\:.*/',
-      'lines' => 3,
+      'pattern' => '/([0-9]+\.[0-9]+\.[0-9]+)/',
+      'lines' => 10,
       'cols' => 20,
     ),
   );
@@ -48,8 +48,8 @@ function styletags_filter_libraries_info() {
     'path' => 'lib',
     'version arguments' => array(
       'file' => 'CHANGELOG.md',
-      'pattern' => '/##\s+([0-9\.]+).*/',
-      'lines' => 3,
+      'pattern' => '/([0-9]+\.[0-9]+\.[0-9]+).*/',
+      'lines' => 10,
       'cols' => 20,
     ),
     'spl_autoload' => TRUE,
@@ -155,7 +155,7 @@ function _styletags_filter_process($text, $filter, $format, $langcode, $cache, $
 
   $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
 
-  _styletags_filter_load_library('QueryPath', 'QueryPath.php');
+  _styletags_filter_load_library('querypath', 'QueryPath.php');
 
   // Extract styles from text.
   $qp = htmlqp($text);
