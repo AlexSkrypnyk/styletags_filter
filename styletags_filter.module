@@ -362,7 +362,7 @@ function _styletags_filter_mapping_flatten($map) {
       $output .= $property;
       $output .= ':';
       $output .= $value;
-      $output .= "\n";
+      $output .= PHP_EOL;
     }
   }
 
