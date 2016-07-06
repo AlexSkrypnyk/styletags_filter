@@ -3,4 +3,4 @@ description = Filter to convert embedded CSS styles into tags.
 core = 7.x
 package = Other
 dependencies[] = libraries
-files[] = styletags_filter.test
+files[] = tests/styletags_filter.test

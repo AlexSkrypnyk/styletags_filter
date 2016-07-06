@@ -1,0 +1,100 @@
+<?php
+
+/**
+ * @file
+ * Unit tests for styletags_filter module.
+ */
+
+/**
+ * Class StyletagsFilterWebTestCase.
+ */
+class StyletagsFilterWebTestCase extends DrupalWebTestCase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function getInfo() {
+    return [
+      'name' => 'Styletags Filter replacement',
+      'description' => 'Tests styles to tags replacement functionality',
+      'group' => 'Styletags Filter',
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp() {
+    drupal_load('module', 'styletags_filter');
+
+    // Load libraries.
+    // Since libraries are OO and are using SPL auto-loader, Drupal must have
+    // DB connection to allow own SPL loader to be called, therefore these
+    // unit tests are using DrupalWebTestCase class.
+    styletags_filter_load_library('querypath');
+    styletags_filter_load_library('PHP-CSS-Parser');
+
+    parent::setUp();
+  }
+
+  /**
+   * Test filtering.
+   */
+  public function testContentFiltering() {
+    $map = array(
+      'strong' => array(
+        'font-weight' => 'bold',
+      ),
+    );
+
+    // Simple replacement.
+    $htmlFixture = '
+    <style>
+      .myclass {
+          font-weight: bold;
+      }
+    </style>      
+    <span class="myclass">some bold text</span>
+    ';
+
+    $expected = '
+    <strong>some bold text</strong>';
+    $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
+
+    // No styles.
+    $htmlFixture = '<span class="myclass">some bold text</span>';
+    $expected = '<span class="myclass">some bold text</span>';
+    $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
+
+    // Multiple classes styles.
+    $htmlFixture = '  
+    <style>
+      .myclass {
+          font-weight: bold;
+      }
+    </style> 
+    <span class="myclass otherclass">some bold text</span>
+    ';
+
+    $expected = '
+    <span class="otherclass">
+      <strong>some bold text</strong>
+    </span>
+    ';
+
+    $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
+  }
+
+  /**
+   * Assertion helper to test content processing.
+   */
+  protected function assertFilteredContent($text, $tags_map, $remove_obsolete_tags, $expected) {
+    $actual = _styletags_filter_process_content($text, $tags_map, $remove_obsolete_tags);
+
+    $expected = trim(preg_replace('/>\s+</', '><', $expected));
+    $actual = trim(preg_replace('/>\s+</', '><', $actual));
+
+    $this->assertEqual($expected, $actual);
+  }
+
+}

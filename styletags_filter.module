@@ -69,6 +69,9 @@ function styletags_filter_libraries_info() {
  * Process callback for filter.
  */
 function styletags_filter_process_callback($text, $filter, $format, $langcode, $cache, $cache_id) {
+  styletags_filter_load_library('querypath');
+  styletags_filter_load_library('PHP-CSS-Parser');
+
   // Prepare configuration from settings.
   $tags_map = _styletags_filter_mapping_parse($filter->settings['tags_map']);
   $remove_obsolete_tags = $filter->settings['remove_obsolete'];
@@ -195,8 +198,6 @@ function _styletags_filter_php_css_parser_autoloader($class) {
 function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_tags) {
   $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
 
-  styletags_filter_load_library('querypath');
-
   // Extract styles from text.
   $qp = htmlqp($text);
   $styles = $qp->branch()->find('style')->innerHtml();
@@ -285,9 +286,6 @@ function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_ta
  */
 function _styletags_filter_parse_styles($styles) {
   $rules = array();
-
-  // Load PHP CSS Parser library.
-  styletags_filter_load_library('PHP-CSS-Parser');
 
   $cdata = '/(<!\[CDATA\[|\]\]>)/i';
   $styles = preg_replace($cdata, '', $styles);
