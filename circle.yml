@@ -97,8 +97,8 @@ dependencies:
   # Download an enable all module dependencies.
   - cd $MODULES_PATH/$MODULE_NAME && grep -aPoi "dependencies\[\]\s*=\s\K([^\s]+)" *.info|tr "\n" "," | xargs drush --yes --root=$DOCROOT en
   # Download required libraries.
-  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/technosophos/querypath/archive/master.zip && unzip -d querypath tmp.zip && rm tmp.zip
-  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/sabberworm/PHP-CSS-Parser/archive/master.zip && unzip -d PHP-CSS-Parser tmp.zip && rm tmp.zip
+  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/technosophos/querypath/archive/master.zip && unzip tmp.zip && rm tmp.zip && mv querypath-master querypath
+  - cd $LIBRARIES_PATH && wget -qO- -O tmp.zip https://github.com/sabberworm/PHP-CSS-Parser/archive/master.zip && unzip tmp.zip && rm tmp.zip && mv PHP-CSS-Parser-master PHP-CSS-Parser
   # Enable current module.
   - drush --yes --root=$DOCROOT en $MODULE_NAME
 
