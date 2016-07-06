@@ -36,6 +36,7 @@ machine:
 dependencies:
   pre:
   - sudo apt-get update; sudo apt-get install unzip
+  - sed -i 's/^;//' /opt/circleci/php/$(phpenv global)/etc/conf.d/xdebug.ini
   # Modify user to make sure that there will be no permission issues.
   - sudo usermod -a -G $WEB_GROUP $WEB_USER
   # Add apache config.
