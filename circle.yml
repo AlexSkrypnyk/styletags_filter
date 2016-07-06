@@ -112,4 +112,4 @@ test:
   # Run code linter.
   - cd $DOCROOT && source ~/.profile && dcr $MODULES_PATH/$MODULE_NAME
   # Run Drupal tests.
-  - php $DOCROOT/scripts/run-tests.sh --php $PHP_EXECUTABLE --url $WEB_URL --xml $TEST_RESULTS "$MODULE_TESTS"
+  - php $DOCROOT/scripts/run-tests.sh --php $PHP_EXECUTABLE --url $WEB_URL --xml $TEST_RESULTS --verbose "$MODULE_TESTS"; ret=$?; cp -r $DOCROOT/sites/default/files/simpletest/verbose $TEST_RESULTS; exit $ret
