@@ -210,10 +210,10 @@ function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_ta
   // Remove style tag since we are working with content only.
   $qp->remove('style');
 
-  // Parse plain text styles into array of rule sets.
+  // Parse plain text styles into array of CSS rulesets.
   $rule_sets = _styletags_filter_parse_styles($styles);
 
-  // If no valid rule set was provided, skip processing.
+  // If no valid CSS ruleset was provided, skip processing.
   if (empty($rule_sets)) {
     return $text;
   }
@@ -224,7 +224,8 @@ function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_ta
     $classes = $qp_item->attr('class');
     $classes = explode(' ', $classes);
 
-    // Traverse through classes and check if previously parsed rule sets match.
+    // Traverse through classes and check if previously parsed CSS rulesets
+    // match.
     foreach ($classes as $class) {
       if (isset($rule_sets[$class])) {
         // Find all tags that match current classes CSS rules.
@@ -275,13 +276,13 @@ function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_ta
 }
 
 /**
- * Parse text-base styles into array of rule sets.
+ * Parse text-base styles into array of CSS rulesets.
  *
  * @param string $styles
  *   String styles as text.
  *
  * @return array
- *   Array of rule sets with class names as keys and array of rule => value
+ *   Array of CSS rulesets with class names as keys and array of rule => value
  *   values.
  */
 function _styletags_filter_parse_styles($styles) {
@@ -294,11 +295,11 @@ function _styletags_filter_parse_styles($styles) {
   $css_parser = new Parser($styles);
   $css_document = $css_parser->parse();
 
-  // Create array of rule sets with property and values as child arrays.
+  // Create array of CSS rulesets with property and values as child arrays.
   foreach ($css_document->getAllRuleSets() as $rule_set) {
     foreach ($rule_set->getSelectors() as $selector) {
       $rule_set_name = (string) $selector;
-      // Skip non-classes rule sets.
+      // Skip non-classes CSS rulesets.
       if (strpos($rule_set_name, '.') !== 0) {
         continue;
       }
