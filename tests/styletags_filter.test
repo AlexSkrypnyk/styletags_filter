@@ -47,7 +47,7 @@ class StyletagsFilterWebTestCase extends DrupalWebTestCase {
       ),
     );
 
-    // Simple replacement.
+    // Class with rules from the map are replaced.
     $htmlFixture = '
     <style>
       .myclass {
@@ -57,16 +57,36 @@ class StyletagsFilterWebTestCase extends DrupalWebTestCase {
     <span class="myclass">some bold text</span>
     ';
 
-    $expected = '
-    <strong>some bold text</strong>';
+    $expected = '<strong>some bold text</strong>';
     $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
 
-    // No styles.
+    // Missing CSS rule for correct class should not remove style tag.
+    $htmlFixture = '
+    <style>
+      .myclass {
+          color: red;
+      }
+    </style>      
+    <span class="myclass">some bold text</span>
+    ';
+
+    $expected = '
+    <style>
+      .myclass {
+          color: red;
+      }
+    </style>      
+    <span class="myclass">some bold text</span>
+    ';
+    $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
+
+    // No provided styles should not modify content.
     $htmlFixture = '<span class="myclass">some bold text</span>';
     $expected = '<span class="myclass">some bold text</span>';
     $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
 
-    // Multiple classes styles.
+    // Multiple classes, with one of them present in styles, should replace
+    // content, but preserve original tag with unspecified class.
     $htmlFixture = '  
     <style>
       .myclass {
@@ -75,12 +95,7 @@ class StyletagsFilterWebTestCase extends DrupalWebTestCase {
     </style> 
     <span class="myclass otherclass">some bold text</span>
     ';
-
-    $expected = '
-    <span class="otherclass">
-      <strong>some bold text</strong>
-    </span>
-    ';
+    $expected = '<span class="otherclass"><strong>some bold text</strong></span>';
 
     $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
   }
