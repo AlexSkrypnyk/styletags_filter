@@ -14,9 +14,9 @@ function styletags_filter_filter_info() {
   $filters['styletags_filter'] = array(
     'title' => t('Convert embedded styles into tags'),
     'description' => t('Convert embedded styles into tags using CSS rule-to-tag mapping.'),
-    'process callback' => '_styletags_filter_process',
-    'tips callback' => '_styletags_filter_tips',
-    'settings callback' => '_styletags_filter_settings',
+    'process callback' => 'styletags_filter_process_callback',
+    'tips callback' => 'styletags_filter_tips_callback',
+    'settings callback' => 'styletags_filter_settings_callback',
     'default settings' => array(
       'tags_map' => _styletags_filter_mapping_flatten(_styletags_filter_mapping_default()),
       'remove_obsolete' => TRUE,
@@ -66,9 +66,20 @@ function styletags_filter_libraries_info() {
 }
 
 /**
+ * Process callback for filter.
+ */
+function styletags_filter_process_callback($text, $filter, $format, $langcode, $cache, $cache_id) {
+  // Prepare configuration from settings.
+  $tags_map = _styletags_filter_mapping_parse($filter->settings['tags_map']);
+  $remove_obsolete_tags = $filter->settings['remove_obsolete'];
+
+  return _styletags_filter_process_content($text, $tags_map, $remove_obsolete_tags);
+}
+
+/**
  * Implements callback_filter_tips().
  */
-function _styletags_filter_tips($filter, $format, $long = FALSE) {
+function styletags_filter_tips_callback($filter, $format, $long = FALSE) {
   if ($long) {
     return t('When embedded styles provided, tags with classes are replaced with relevant tags, which correspond to class rules.');
   }
@@ -80,7 +91,7 @@ function _styletags_filter_tips($filter, $format, $long = FALSE) {
 /**
  * Implements callback_filter_settings().
  */
-function _styletags_filter_settings($form, &$form_state, $filter, $format, $defaults) {
+function styletags_filter_settings_callback($form, &$form_state, $filter, $format, $defaults) {
   $filter->settings += $defaults;
 
   $code_example_before = '
@@ -132,7 +143,7 @@ function _styletags_filter_settings($form, &$form_state, $filter, $format, $defa
  * @param string $library_name
  *   Library name.
  */
-function _styletags_filter_load_library($library_name) {
+function styletags_filter_load_library($library_name) {
   $library = libraries_load($library_name);
 
   if ($library) {
@@ -169,16 +180,22 @@ function _styletags_filter_php_css_parser_autoloader($class) {
 }
 
 /**
- * Process callback for filter.
+ * Filter content processor.
+ *
+ * @param string $text
+ *   Text to process.
+ * @param array $tags_map
+ *   Array of tags mapping.
+ * @param bool $remove_obsolete_tags
+ *   Flag to remove obsolete tags.
+ *
+ * @return string
+ *   Processed text.
  */
-function _styletags_filter_process($text, $filter, $format, $langcode, $cache, $cache_id) {
-  // Prepare configuration from settings.
-  $tags_map = _styletags_filter_mapping_parse($filter->settings['tags_map']);
-  $remove_obsolete_tags = $filter->settings['remove_obsolete'];
-
+function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_tags) {
   $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
 
-  _styletags_filter_load_library('querypath');
+  styletags_filter_load_library('querypath');
 
   // Extract styles from text.
   $qp = htmlqp($text);
@@ -270,7 +287,7 @@ function _styletags_filter_parse_styles($styles) {
   $rules = array();
 
   // Load PHP CSS Parser library.
-  _styletags_filter_load_library('PHP-CSS-Parser');
+  styletags_filter_load_library('PHP-CSS-Parser');
 
   $cdata = '/(<!\[CDATA\[|\]\]>)/i';
   $styles = preg_replace($cdata, '', $styles);
@@ -327,7 +344,7 @@ function _styletags_filter_find_tag($map, $property, $value) {
 }
 
 /**
- * Helper to parse text settings into expected array structure.
+ * Helper to parse filter settings into expected array structure.
  */
 function _styletags_filter_mapping_parse($text) {
   $map = drupal_static(__FUNCTION__);
