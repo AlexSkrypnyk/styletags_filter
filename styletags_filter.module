@@ -196,8 +196,10 @@ function _styletags_filter_php_css_parser_autoloader($class) {
  *   Processed text.
  */
 function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_tags) {
-  $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
-
+  if (empty($text)) {
+    return $text;
+  }
+  
   // Extract styles from text.
   $qp = htmlqp($text);
   $styles = $qp->branch()->find('style')->innerHtml();
@@ -219,6 +221,7 @@ function _styletags_filter_process_content($text, $tags_map, $remove_obsolete_ta
   }
 
   // Find all tags with set 'class' attribute.
+  $block_level_tags = explode(',', 'address,blockquote,center,dir,div,dl,fieldset,form,h1,h2,h3,h4,h5,h6,isindex,menu,noframes,noscript,ol,p,pre,table,ul');
   foreach ($qp->branch()->find('*[class]') as $qp_item) {
     // Get array odf classes.
     $classes = $qp_item->attr('class');
