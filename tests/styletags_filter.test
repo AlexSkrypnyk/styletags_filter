@@ -60,26 +60,6 @@ class StyletagsFilterWebTestCase extends DrupalWebTestCase {
     $expected = '<strong>some bold text</strong>';
     $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
 
-    // Missing CSS rule for correct class should not remove style tag.
-    $htmlFixture = '
-    <style>
-      .myclass {
-          color: red;
-      }
-    </style>      
-    <span class="myclass">some bold text</span>
-    ';
-
-    $expected = '
-    <style>
-      .myclass {
-          color: red;
-      }
-    </style>      
-    <span class="myclass">some bold text</span>
-    ';
-    $this->assertFilteredContent($htmlFixture, $map, TRUE, $expected);
-
     // No provided styles should not modify content.
     $htmlFixture = '<span class="myclass">some bold text</span>';
     $expected = '<span class="myclass">some bold text</span>';
